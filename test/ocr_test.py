@@ -14,8 +14,6 @@ class MyTestCase(unittest.TestCase):
         r = reader.rotate_degree()
         print(r)
 
-
-
     def test_col(self):
         reader = Reader()
         reader.open('../TESTDATA/light.png')
@@ -35,16 +33,23 @@ class MyTestCase(unittest.TestCase):
 
         index, other = reader.split_image()
 
-        i = reader.chop_colums(index)
-        print(i)
-        o = reader.chop_colums(other)
-        print(o)
+        s, e = reader.chop_colums(index)
+        print(s)
+        print(e)
+        for pos in s:
+            index[:, pos] = 230
 
-        for pos in i:
-            index[:, pos] = 200
+        for pos in e:
+            index[:, pos] = 120
 
-        for pos in o:
-            other[:, pos] = 200
+        s, e = reader.chop_colums(other)
+        print(s)
+        print(e)
+        for pos in s:
+            other[:, pos] = 230
+
+        for pos in e:
+            other[:, pos] = 120
 
         img = Image.fromarray(index)
         img.save('index.png')
@@ -52,36 +57,34 @@ class MyTestCase(unittest.TestCase):
         img = Image.fromarray(other)
         img.save('other.png')
 
-        i = reader.chop_colums(index)
-        print(i)
-        o = reader.chop_colums(other)
-        print(o)
-
+        reader.analyze()
 
     def test_chop(self):
         reader = Reader()
         reader.open('../TESTDATA/light.png')
-        c = reader.chop_colums(reader.img_lines[0])
+        c, w = reader.chop_colums(reader.img_lines[0])
         print(c)
+        print(w)
 
-        c = reader.chop_colums(reader.img_lines[1])
+        c,w  = reader.chop_colums(reader.img_lines[1])
         print(c)
+        print(w)
 
-        c = reader.chop_colums(reader.img_lines[2])
+        c,w = reader.chop_colums(reader.img_lines[2])
         print(c)
-
-        c = reader.chop_colums(reader.img_lines[3])
+        print(w)
+        c,w = reader.chop_colums(reader.img_lines[3])
         print(c)
-
-        c = reader.chop_colums(reader.img_lines[4])
+        print(w)
+        c,w = reader.chop_colums(reader.img_lines[4])
         print(c)
-
-        c = reader.chop_colums(reader.img_lines[5])
+        print(w)
+        c,w = reader.chop_colums(reader.img_lines[5])
         print(c)
-
-        c = reader.chop_colums(reader.img_lines[6])
+        print(w)
+        c,w = reader.chop_colums(reader.img_lines[6])
         print(c)
-
+        print(w)
 
     def test_ocr(self):
         bb, bb_char = self.bb_list(2)
@@ -101,6 +104,9 @@ class MyTestCase(unittest.TestCase):
     def bb_list(self, index):
         reader = Reader()
         reader.open('../TESTDATA/light.png')
+
+        r = reader.rotate_degree()
+        reader.open('../TESTDATA/light.png', r)
 
         bb = reader.text_bb(index)
 
@@ -122,10 +128,6 @@ class MyTestCase(unittest.TestCase):
 
         return bb_index, bb_char
 
-
-
-    def test_something(self):
-        self.assertEqual(True, False)
 
 
 if __name__ == '__main__':

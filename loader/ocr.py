@@ -5,15 +5,75 @@ import pyocr
 WHITE_LEVEL = 150
 BLANK_LINE_LEVEL = 5
 PADDING = 1
+PADDING_X = 1
 HEADER_LINES = 2
 FOOTER_LINES = 1
 
+NONE_LINE = 0
+INDEX_LINE = 1
+OTHER_LINE = 2
 
 class Reader:
     def __init__(self):
         self.img = None
         self.img_lines = []
+        self.img_type = []
         self.col = []
+        self.col_end = []
+
+        self.lights_no_start = 0
+        self.lights_no_end = 0
+
+        self.lights_name_start = 0
+        self.lights_name_end = 0
+
+        self.lights_pos_start = 0
+        self.lights_pos_end = 0
+
+        self.lights_type_start = 0
+        self.lights_type_end = 0
+
+        self.lights_height_start = 0
+        self.lights_height_end = 0
+
+        self.lights_range_start = 0
+        self.lights_range_end = 0
+
+        self.lights_structure_start = 0
+        self.lights_structure_end = 0
+
+        self.lights_remark_start = 0
+        self.lights_remark_end = 0
+
+    def analyze(self):
+        index, other = self.split_image()
+
+        c, w = self.chop_colums(index)
+        self.lights_no_start = w[0] - PADDING_X
+        self.lights_no_end = c[0] + PADDING_X
+
+        self.lights_name_start = w[1] - PADDING_X
+        self.lights_name_end = self.lights_name_start + 300
+
+        c, w = self.chop_colums(other)
+
+        self.lights_pos_start = w[0] - PADDING_X
+        self.lights_pos_end = c[0] - PADDING_X
+
+        self.lights_type_start = w[2] - PADDING_X
+        self.lights_type_end = c[2] - PADDING_X
+
+        self.lights_height_start = w[3] - PADDING_X
+        self.lights_height_end = c[3] - PADDING_X
+
+        self.lights_range_start = w[4] - PADDING_X
+        self.lights_range_end = c[4] - PADDING_X
+
+        self.lights_structure_start = w[5] - PADDING_X
+        self.lights_structure_end = c[5] - PADDING_X
+
+        self.lights_remark_start = w[6] - PADDING_X
+        self.lights_remark_end = self.lights_range_start + 300
 
 
     def rotate_degree(self):
@@ -24,15 +84,18 @@ class Reader:
         return rad * 180
 
     def chop_lines(self):
+        self.col = []
+        self.col_end = []
         start_x = 0
         end_x = 0
 
         for index in range(HEADER_LINES, len(self.img_lines)-FOOTER_LINES):
             img = self.img_lines[index]
-            c = self.chop_colums(img)
+            c, w = self.chop_colums(img)
             self.col.append(c)
+            self.col_end.append(w)
 
-            if c[0] < 100:
+            if w[0] < 100:
                 if start_x == 0:
                     start_x = c[0]
                 else:
@@ -41,20 +104,22 @@ class Reader:
         return start_x, end_x
 
     def split_image(self):
-
         index_line = self.img[0:1, :]
         other_line = self.img[0:1, :]
+        self.img_type = np.zeros(len(self.img_lines))
 
         for index in range(HEADER_LINES, len(self.img_lines)-FOOTER_LINES):
             img = self.img_lines[index]
-            c = self.chop_colums(img)
+            c, w = self.chop_colums(img)
 
             in_index = False
-            if c[0] < 100:
+            if w[0] < 100:
                 if not in_index:
+                    self.img_type[index] = INDEX_LINE
                     index_line = np.r_[index_line, img]
                     in_index = True
                 else:
+                    self.img_type[index] = OTHER_LINE
                     other_line = np.r_[other_line, img]
             else:
                 in_index = False
@@ -72,25 +137,29 @@ class Reader:
         th = (255 * height*0.99) / height
         column = th < column
 
-        in_char = False
+        in_white = False
         char_pos = []
-        start = 0
+        white_pos = []
 
-        for pos in range(10, len(column)-10):
+        start = 0
+        start_pos = 10
+        for pos in range(start_pos, len(column)-10):
             if column[pos]:
-                if not in_char:
-                    in_char = True
+                if not in_white:
+                    in_white = True
                     start = pos
             else:
-                if in_char:
+                if in_white:
                     end = pos
                     width = end - start
                     if 6 < width:
-                        char_pos.append(pos)
+                        white_pos.append(end)
+                        if start != start_pos:
+                            char_pos.append(start)
 
-                in_char = False
+                in_white = False
 
-        return char_pos
+        return char_pos, white_pos
 
     def text_bb(self, index):
         tools = pyocr.get_available_tools()
