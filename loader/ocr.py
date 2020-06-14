@@ -5,13 +5,15 @@ import pyocr
 WHITE_LEVEL = 150
 BLANK_LINE_LEVEL = 5
 PADDING = 1
-PADDING_X = 1
+PADDING_X = 0
 HEADER_LINES = 2
 FOOTER_LINES = 1
 
 NONE_LINE = 0
 INDEX_LINE = 1
 OTHER_LINE = 2
+
+LINE_HEIGHT = 60
 
 class Reader:
     def __init__(self):
@@ -53,7 +55,7 @@ class Reader:
         self.lights_no_end = c[0] + PADDING_X
 
         self.lights_name_start = w[1] - PADDING_X
-        self.lights_name_end = self.lights_name_start + 300
+        self.lights_name_end = self.lights_name_start + 350
 
         c, w = self.chop_colums(other)
 
@@ -75,6 +77,51 @@ class Reader:
         self.lights_remark_start = w[6] - PADDING_X
         self.lights_remark_end = self.lights_range_start + 300
 
+    def make_new_page(self):
+        canvas = Image.new('L', (2000, 1800), 255)
+
+        pos = 0
+        other_line_index = 0
+        for index in range(HEADER_LINES, len(self.img_lines)-FOOTER_LINES):
+            img = self.img_lines[index]
+            if self.img_type[index] == INDEX_LINE:
+                pos += 1
+                other_line_index = 0
+                # lights no
+                parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
+                canvas.paste(parts, (10, pos*LINE_HEIGHT))
+
+                # lights name
+                parts = Image.fromarray(img[:, self.lights_name_start:self.lights_name_end])
+                canvas.paste(parts, (1000, pos*LINE_HEIGHT))
+            elif self.img_type[index] == OTHER_LINE:
+                if other_line_index == 0:
+                    # major lights no
+                    #parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
+                    #canvas.paste(parts, (70, pos*LINE_HEIGHT))
+
+                    # lights type
+                    print('lights', self.lights_type_start, self.lights_type_end)
+                    parts = Image.fromarray(img[:, self.lights_type_start:self.lights_type_end])
+                    canvas.paste(parts, (83, pos*LINE_HEIGHT))
+
+                    # lights structure
+                    print('lights type', self.lights_structure_start, self.lights_structure_end)
+                    parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
+                    canvas.paste(parts, (190, pos*LINE_HEIGHT))
+                elif other_line_index == 1:
+                    # lights structure
+                    print('lights type2', self.lights_structure_start, self.lights_structure_end)
+                    parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
+                    canvas.paste(parts, (190+146, pos*LINE_HEIGHT))
+                elif other_line_index == 2:
+                    print('lights', self.lights_type_start, self.lights_type_end)
+                    parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
+                    canvas.paste(parts, (190+146+146, pos*LINE_HEIGHT))
+
+                other_line_index += 1
+
+        return canvas
 
     def rotate_degree(self):
         start_x, end_x = self.chop_lines()
@@ -113,16 +160,20 @@ class Reader:
             c, w = self.chop_colums(img)
 
             in_index = False
+
             if w[0] < 100:
                 if not in_index:
+                    print("indexline")
                     self.img_type[index] = INDEX_LINE
                     index_line = np.r_[index_line, img]
                     in_index = True
                 else:
+                    in_index = False
                     self.img_type[index] = OTHER_LINE
                     other_line = np.r_[other_line, img]
             else:
                 in_index = False
+                self.img_type[index] = OTHER_LINE
                 other_line = np.r_[other_line, img]
 
             self.col.append(c)
@@ -145,7 +196,9 @@ class Reader:
         start_pos = 10
         for pos in range(start_pos, len(column)-10):
             if column[pos]:
-                if not in_white:
+                if in_white:
+                    pass
+                else:
                     in_white = True
                     start = pos
             else:

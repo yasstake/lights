@@ -14,6 +14,27 @@ class MyTestCase(unittest.TestCase):
         r = reader.rotate_degree()
         print(r)
 
+    def test_new_canvas(self):
+        reader = Reader()
+        reader.open('../TESTDATA/light.png')
+
+        r = reader.rotate_degree()
+        print(r)
+
+        reader.open('../TESTDATA/light.png', r)
+        r = reader.rotate_degree()
+
+        reader.analyze()
+        print(reader.lights_no_start)
+        print(reader.lights_name_start)
+
+        canvas = reader.make_new_page()
+
+        canvas.save('new.png')
+
+
+
+
     def test_col(self):
         reader = Reader()
         reader.open('../TESTDATA/light.png')
