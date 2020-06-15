@@ -13,7 +13,9 @@ NONE_LINE = 0
 INDEX_LINE = 1
 OTHER_LINE = 2
 
-LINE_HEIGHT = 60
+LINE_HEIGHT = 100
+
+CHAR_WIDTH = 16
 
 class Reader:
     def __init__(self):
@@ -75,49 +77,70 @@ class Reader:
         self.lights_structure_end = c[5] - PADDING_X
 
         self.lights_remark_start = w[6] - PADDING_X
-        self.lights_remark_end = self.lights_range_start + 300
+        self.lights_remark_end = self.lights_range_start + CHAR_WIDTH * 30
 
     def make_new_page(self):
-        canvas = Image.new('L', (2000, 1800), 255)
+        canvas = Image.new('L', (2100, 2300), 255)
 
         pos = 0
         other_line_index = 0
         for index in range(HEADER_LINES, len(self.img_lines)-FOOTER_LINES):
             img = self.img_lines[index]
             if self.img_type[index] == INDEX_LINE:
+                print('indexline')
                 pos += 1
                 other_line_index = 0
                 # lights no
+
                 parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
                 canvas.paste(parts, (10, pos*LINE_HEIGHT))
 
                 # lights name
                 parts = Image.fromarray(img[:, self.lights_name_start:self.lights_name_end])
-                canvas.paste(parts, (1000, pos*LINE_HEIGHT))
+                # canvas.paste(parts, (1200, pos*LINE_HEIGHT))
+                # canvas.paste(img, (10, pos*LINE_HEIGHT))
             elif self.img_type[index] == OTHER_LINE:
                 if other_line_index == 0:
+                    print('otherline1')
                     # major lights no
                     #parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
                     #canvas.paste(parts, (70, pos*LINE_HEIGHT))
 
                     # lights type
-                    print('lights', self.lights_type_start, self.lights_type_end)
+                    # print('lights', self.lights_type_start, self.lights_type_end)
                     parts = Image.fromarray(img[:, self.lights_type_start:self.lights_type_end])
                     canvas.paste(parts, (83, pos*LINE_HEIGHT))
 
                     # lights structure
-                    print('lights type', self.lights_structure_start, self.lights_structure_end)
+                    # print('lights type', self.lights_structure_start, self.lights_structure_end)
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
                     canvas.paste(parts, (190, pos*LINE_HEIGHT))
+
+
+                    parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
+
+                    canvas.paste(parts, (630, pos * LINE_HEIGHT))
+                    #canvas.paste(img, (0, pos*LINE_HEIGHT + 40))
                 elif other_line_index == 1:
                     # lights structure
                     print('lights type2', self.lights_structure_start, self.lights_structure_end)
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
                     canvas.paste(parts, (190+146, pos*LINE_HEIGHT))
+
+                    parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
+                    canvas.paste(parts, (932, pos * LINE_HEIGHT))
+                    #canvas.paste(img, (0, pos*LINE_HEIGHT + 60))
+
                 elif other_line_index == 2:
-                    print('lights', self.lights_type_start, self.lights_type_end)
+                    print('lights type3', self.lights_structure_start, self.lights_structure_end)
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
-                    canvas.paste(parts, (190+146+146, pos*LINE_HEIGHT))
+                    canvas.paste(parts, (190 + 146 + 133, pos * LINE_HEIGHT))
+
+                    parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
+                    canvas.paste(parts, (1220, pos * LINE_HEIGHT))
+                    #canvas.paste(img, (0, pos*LINE_HEIGHT + 80))
+                else:
+                    print("out of bound")
 
                 other_line_index += 1
 
@@ -163,11 +186,11 @@ class Reader:
 
             if w[0] < 100:
                 if not in_index:
-                    print("indexline")
+                    in_index = True
                     self.img_type[index] = INDEX_LINE
                     index_line = np.r_[index_line, img]
-                    in_index = True
                 else:
+                    print('MAJRO')
                     in_index = False
                     self.img_type[index] = OTHER_LINE
                     other_line = np.r_[other_line, img]
@@ -260,9 +283,12 @@ class Reader:
                     end = line_count
                     height = end - start
 
-                    if height < 30:
+                    if height < 10:
+                        in_line = False
+                    elif height < 30:
                         img = self.img[start - PADDING :end + PADDING, :]
                         self.img_lines.append(img)
+                        in_line = False
                     else:
                         half = int(height / PADDING)
 
@@ -272,6 +298,6 @@ class Reader:
                         img = self.img[start + half - PADDING:end + PADDING, :]
                         self.img_lines.append(img)
 
-                    in_line = False
+                        in_line = False
 
             line_count += 1
