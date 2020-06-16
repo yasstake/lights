@@ -1,6 +1,8 @@
+import sys
 import numpy as np
 from PIL import Image
 import pyocr
+
 
 WHITE_LEVEL = 150
 BLANK_LINE_LEVEL = 5
@@ -49,6 +51,41 @@ class Reader:
         self.lights_remark_start = 0
         self.lights_remark_end = 0
 
+    def find_best_roate(self, file):
+        j_max = 0
+        r_max = 0
+        img = Image.open(file)
+        skip = 0
+
+        for r in range(-100, 100):
+            rotate = r/400
+            j = self.evaluate_rotate(img, rotate)
+            if j < j_max:
+                skip += 1
+            else:
+                j_max = j
+                r_max = rotate
+
+            if 5 < skip:
+                break
+
+        return r_max
+
+
+    def evaluate_rotate(self, img, r):
+        img = img.rotate(r, fillcolor=(255, 255, 255))
+
+        img = np.array(img.convert('L'))
+        img = np.where(100 < img, 0, 255)
+        x = np.average(img, axis=0)
+        y = np.average(img, axis=1)
+
+        x_blank = len(x) - np.count_nonzero(x)
+        y_blank = len(y) - np.count_nonzero(y)
+
+        return x_blank + y_blank
+
+
     def analyze(self):
         index, other = self.split_image()
 
@@ -61,22 +98,32 @@ class Reader:
 
         c, w = self.chop_colums(other)
 
-        self.lights_pos_start = w[0] - PADDING_X
-        self.lights_pos_end = c[0] - PADDING_X
+        p = 0
+        self.lights_pos_start = w[p] - PADDING_X
+        self.lights_pos_end = c[p] - PADDING_X
 
-        self.lights_type_start = w[2] - PADDING_X
-        self.lights_type_end = c[2] - PADDING_X
+        if c[p] - w[p] < 70:
+            p += 2
+        else:
+            p += 1
 
-        self.lights_height_start = w[3] - PADDING_X
-        self.lights_height_end = c[3] - PADDING_X
+        self.lights_type_start = w[p] - PADDING_X
+        self.lights_type_end = c[p] - PADDING_X
 
-        self.lights_range_start = w[4] - PADDING_X
-        self.lights_range_end = c[4] - PADDING_X
+        p += 1
+        self.lights_height_start = w[p] - PADDING_X
+        self.lights_height_end = c[p] - PADDING_X
 
-        self.lights_structure_start = w[5] - PADDING_X
-        self.lights_structure_end = c[5] - PADDING_X
+        p += 1
+        self.lights_range_start = w[p] - PADDING_X
+        self.lights_range_end = c[p] - PADDING_X
 
-        self.lights_remark_start = w[6] - PADDING_X
+        p += 1
+        self.lights_structure_start = w[p] - PADDING_X
+        self.lights_structure_end = c[p] - PADDING_X
+
+        p += 1
+        self.lights_remark_start = w[p] - PADDING_X
         self.lights_remark_end = self.lights_range_start + CHAR_WIDTH * 30
 
     def make_new_page(self):
@@ -87,7 +134,6 @@ class Reader:
         for index in range(HEADER_LINES, len(self.img_lines)-FOOTER_LINES):
             img = self.img_lines[index]
             if self.img_type[index] == INDEX_LINE:
-                print('indexline')
                 pos += 1
                 other_line_index = 0
                 # lights no
@@ -101,7 +147,6 @@ class Reader:
                 # canvas.paste(img, (10, pos*LINE_HEIGHT))
             elif self.img_type[index] == OTHER_LINE:
                 if other_line_index == 0:
-                    print('otherline1')
                     # major lights no
                     #parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
                     #canvas.paste(parts, (70, pos*LINE_HEIGHT))
@@ -119,25 +164,23 @@ class Reader:
 
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
 
-                    canvas.paste(parts, (630, pos * LINE_HEIGHT))
+                    canvas.paste(parts, (650, pos * LINE_HEIGHT))
                     #canvas.paste(img, (0, pos*LINE_HEIGHT + 40))
                 elif other_line_index == 1:
                     # lights structure
-                    print('lights type2', self.lights_structure_start, self.lights_structure_end)
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
                     canvas.paste(parts, (190+146, pos*LINE_HEIGHT))
 
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
-                    canvas.paste(parts, (932, pos * LINE_HEIGHT))
+                    canvas.paste(parts, (650+300, pos * LINE_HEIGHT))
                     #canvas.paste(img, (0, pos*LINE_HEIGHT + 60))
 
                 elif other_line_index == 2:
-                    print('lights type3', self.lights_structure_start, self.lights_structure_end)
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
                     canvas.paste(parts, (190 + 146 + 133, pos * LINE_HEIGHT))
 
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
-                    canvas.paste(parts, (1220, pos * LINE_HEIGHT))
+                    canvas.paste(parts, (650+300+300, pos * LINE_HEIGHT))
                     #canvas.paste(img, (0, pos*LINE_HEIGHT + 80))
                 else:
                     print("out of bound")
@@ -149,9 +192,16 @@ class Reader:
     def rotate_degree(self):
         start_x, end_x = self.chop_lines()
 
-        rad = (start_x - end_x) / 3000
+        rad = (end_x - start_x) / self.img.shape[0]
+        print("rad", rad)
+        rad = np.arctan(rad)
+        print(rad)
 
-        return rad * 180
+        rad = np.rad2deg(rad)
+        print(rad)
+
+        return rad
+        # return rad
 
     def chop_lines(self):
         self.col = []
@@ -177,6 +227,7 @@ class Reader:
         index_line = self.img[0:1, :]
         other_line = self.img[0:1, :]
         self.img_type = np.zeros(len(self.img_lines))
+        start_pos = 0
 
         for index in range(HEADER_LINES, len(self.img_lines)-FOOTER_LINES):
             img = self.img_lines[index]
@@ -184,13 +235,16 @@ class Reader:
 
             in_index = False
 
-            if w[0] < 100:
+            if not start_pos:
+                start_pos = w[0] + 30
+
+            if w[0] < start_pos:
                 if not in_index:
                     in_index = True
                     self.img_type[index] = INDEX_LINE
                     index_line = np.r_[index_line, img]
                 else:
-                    print('MAJRO')
+                    print('--MAJRO--')
                     in_index = False
                     self.img_type[index] = OTHER_LINE
                     other_line = np.r_[other_line, img]
@@ -301,3 +355,60 @@ class Reader:
                         in_line = False
 
             line_count += 1
+
+
+def debug(reader):
+    index, other = reader.split_image()
+
+    s, e = reader.chop_colums(index)
+    print(s)
+    print(e)
+    for pos in s:
+        index[:, pos] = 230
+
+    for pos in e:
+        index[:, pos] = 120
+
+    s, e = reader.chop_colums(other)
+    print(s)
+    print(e)
+    for pos in s:
+        other[:, pos] = 230
+
+    for pos in e:
+        other[:, pos] = 120
+
+    img = Image.fromarray(index)
+    img.save('index.png')
+
+    img = Image.fromarray(other)
+    img.save('other.png')
+
+
+def convert(original_file, new_file):
+    reader = Reader()
+    r = reader.find_best_roate(original_file)
+    print('rotate', r)
+    reader.open(original_file, r)
+
+    debug(reader)
+
+    reader.analyze()
+
+    canvas = reader.make_new_page()
+    canvas.save(new_file)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        from_file = sys.argv[1]
+        to_file = from_file + 'new.png'
+    elif len(sys.argv) == 3:
+        from_file = sys.argv[1]
+        to_file = sys.argv[2]
+    else:
+        print('from, to')
+        exit(1)
+
+    print('convert', from_file, to_file)
+    convert(from_file, to_file)

@@ -32,6 +32,12 @@ class MyTestCase(unittest.TestCase):
 
         canvas.save('new.png')
 
+    def test_evaluate(self):
+        reader = Reader()
+
+        r = reader.find_best_roate('../TESTDATA/light.png')
+        print(r)
+
 
 
 
