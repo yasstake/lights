@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 from PIL import Image
+from PIL import ImageDraw
 import pyocr
 
 
@@ -49,8 +50,8 @@ FIND_OFFSET = 3
 
 OUTPUT_START_OFFSET = 30
 OUTPUT_TYPE_OFFSET = OUTPUT_START_OFFSET + 120
-OUTPUT_STRUCTURE_OFFSET = OUTPUT_START_OFFSET + 230
-OUTPUT_REMARK_OFFSET = OUTPUT_START_OFFSET + 710
+OUTPUT_STRUCTURE_OFFSET = OUTPUT_START_OFFSET + 300
+OUTPUT_REMARK_OFFSET = OUTPUT_START_OFFSET + 800
 
 
 def find_pos(pos_array, start):
@@ -152,10 +153,16 @@ class Reader:
         self.lights_type_end = find_pos(c, self.lights_type_start + LIGHT_TYPE_WIDTH)
 
         self.lights_remark_start = find_pos(w, start_pos + LIGHT_REMARK_OFFSET)
-        self.lights_remark_end = self.lights_remark_start + LIGHT_REMARK_WIDTH
+        if self.lights_remark_start:
+            self.lights_remark_end = self.lights_remark_start + LIGHT_REMARK_WIDTH
+        else:
+            self.lights_remark_start = 0
+            self.lights_remark_end = 0
 
         self.lights_structure_start = find_pos(w, start_pos + LIGHT_STRUCTURE_OFFSET)
         self.lights_structure_end = find_pos(c, self.lights_structure_start)
+        if not self.lights_structure_end:
+            self.lights_structure_end = self.lights_structure_start + LIGHT_STRUCTURE_WIDTH
 
         if self.lights_structure_start == self.lights_remark_start:
             self.lights_structure_end = self.lights_structure_start
@@ -183,6 +190,11 @@ class Reader:
                 parts = Image.fromarray(img[:, self.lights_name_start:self.lights_name_end])
                 # canvas.paste(parts, (1200, pos*LINE_HEIGHT))
                 # canvas.paste(img, (10, pos*LINE_HEIGHT))
+
+                draw = ImageDraw.Draw(canvas)
+                draw.line((0, pos*LINE_HEIGHT + 30, canvas.width, pos*LINE_HEIGHT + 30), fill=200)
+                del draw
+
             elif self.img_type[index] == OTHER_LINE:
                 if other_line_index == 0:
                     # major lights no
