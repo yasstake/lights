@@ -43,10 +43,10 @@ LIGHT_NAME_WIDTH = CHAR_WIDTH * 30
 LIGHT_TYPE_OFFSET = W2[2] - W1[0]
 LIGHT_TYPE_WIDTH = C2[2] - W2[2]
 
-LIGHT_STRUCTURE_OFFSET = W2[5] - W1[0]
+LIGHT_STRUCTURE_OFFSET = W2[5] - W2[0]
 LIGHT_STRUCTURE_WIDTH = C2[5] - W2[5]
 
-LIGHT_REMARK_OFFSET = W2[6] - W1[0]
+LIGHT_REMARK_OFFSET = W2[6] - W2[0]
 LIGHT_REMARK_WIDTH = CHAR_WIDTH * 18
 
 FIND_OFFSET = 3
@@ -55,6 +55,7 @@ OUTPUT_START_OFFSET = 30
 OUTPUT_TYPE_OFFSET = OUTPUT_START_OFFSET + 120
 OUTPUT_STRUCTURE_OFFSET = OUTPUT_START_OFFSET + 300
 OUTPUT_REMARK_OFFSET = OUTPUT_START_OFFSET + 800
+OUTPUT_MAJOR_OFFSET = OUTPUT_REMARK_OFFSET + 1000
 
 
 def find_pos(pos_array, start):
@@ -63,6 +64,8 @@ def find_pos(pos_array, start):
     for pos in pos_array:
         if start <= pos:
             return pos
+
+    print('canotfund', start, '[', pos_array, ']')
     return None
 
 
@@ -155,15 +158,17 @@ class Reader:
         self.lights_type_start = find_pos(w, start_pos + LIGHT_TYPE_OFFSET)
         self.lights_type_end = find_pos(c, self.lights_type_start + LIGHT_TYPE_WIDTH)
 
-        self.lights_remark_start = find_pos(w, start_pos + LIGHT_REMARK_OFFSET)
+        self.lights_remark_start = find_pos(w, self.lights_type_start + LIGHT_REMARK_OFFSET)
         if self.lights_remark_start:
             self.lights_remark_end = self.lights_remark_start + LIGHT_REMARK_WIDTH
         else:
             self.lights_remark_start = 0
             self.lights_remark_end = 0
 
-        self.lights_structure_start = find_pos(w, start_pos + LIGHT_STRUCTURE_OFFSET)
-        self.lights_structure_end = find_pos(c, self.lights_structure_start)
+        self.lights_structure_start = find_pos(w, self.lights_type_start + LIGHT_STRUCTURE_OFFSET -
+                                                                         LIGHT_TYPE_OFFSET)
+        self.lights_structure_end = find_pos(c, self.lights_structure_start + LIGHT_STRUCTURE_WIDTH)
+
         if not self.lights_structure_end:
             self.lights_structure_end = self.lights_structure_start + LIGHT_STRUCTURE_WIDTH
 
@@ -175,7 +180,7 @@ class Reader:
         print('REM ', self.lights_remark_start, self.lights_remark_end)
 
     def make_new_page(self):
-        canvas = Image.new('L', (2100, 2300), 255)
+        canvas = Image.new('L', (2100, 2800), 255)
 
         pos = 0
         other_line_index = 0
@@ -201,8 +206,8 @@ class Reader:
             elif self.img_type[index] == OTHER_LINE:
                 if other_line_index == 0:
                     # major lights no
-                    #parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
-                    #canvas.paste(parts, (70, pos*LINE_HEIGHT))
+                    parts = Image.fromarray(img[:, self.lights_no_start:self.lights_no_end])
+                    canvas.paste(parts, (OUTPUT_MAJOR_OFFSET, pos*LINE_HEIGHT - int(img.shape[0]/2)))
 
                     parts = Image.fromarray(img[:, self.lights_type_start:self.lights_type_end])
                     canvas.paste(parts, (OUTPUT_TYPE_OFFSET, pos*LINE_HEIGHT - int(img.shape[0]/2)))
@@ -234,6 +239,11 @@ class Reader:
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
                     width = self.lights_remark_end - self.lights_remark_start
                     canvas.paste(parts, (OUTPUT_REMARK_OFFSET + width*3, pos * LINE_HEIGHT - int(img.shape[0]/2)))
+
+                elif other_line_index == 4:
+                    parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
+                    width = self.lights_remark_end - self.lights_remark_start
+                    canvas.paste(parts, (OUTPUT_REMARK_OFFSET + width*4, pos * LINE_HEIGHT - int(img.shape[0]/2)))
 
                 else:
                     print("out of bound")
