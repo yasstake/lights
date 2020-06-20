@@ -1,8 +1,11 @@
 import sys
+import glob
+import os
 import numpy as np
 from PIL import Image
 from PIL import ImageDraw
 import pyocr
+
 
 
 WHITE_LEVEL = 150
@@ -467,5 +470,10 @@ if __name__ == '__main__':
         print('from, to')
         exit(1)
 
-    print('convert', from_file, to_file)
-    convert(from_file, to_file)
+    if from_file.endswith('.png'):
+        print('convert', from_file, to_file)
+    else:
+        for file in glob.glob(from_file + '*.png'):
+            to_file = to_file + '/' + os.path.basename(file)
+            print(file, to_file)
+            convert(from_file, to_file)
