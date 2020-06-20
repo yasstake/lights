@@ -77,8 +77,8 @@ class Reader:
         self.lights_no_start = 0
         self.lights_no_end = 0
 
-        self.lights_name_start = 0
-        self.lights_name_end = 0
+        # self.lights_name_start = 0
+        # self.lights_name_end = 0
 
         self.lights_pos_start = 0
         self.lights_pos_end = 0
@@ -144,11 +144,11 @@ class Reader:
 
         self.lights_no_start = start_pos
         self.lights_no_end = find_pos(c, self.lights_no_start + LIGHT_NUMBER_WIDTH)
-        self.lights_name_start = find_pos(w, start_pos + LIGHT_NAME_OFFSET)
-        self.lights_name_end = self.lights_name_start + LIGHT_NAME_WIDTH
+        # self.lights_name_start = find_pos(w, start_pos + LIGHT_NAME_OFFSET)
+        # self.lights_name_end = self.lights_name_start + LIGHT_NAME_WIDTH
 
-        print('ID  ', self.lights_no_start, self.lights_no_end)
-        print('name', self.lights_name_start, self.lights_name_end)
+        # print('ID  ', self.lights_no_start, self.lights_no_end)
+        # print('name', self.lights_name_start, self.lights_name_end)
 
         c, w = self.chop_colums(other)
 
@@ -190,7 +190,7 @@ class Reader:
                 canvas.paste(parts, (OUTPUT_START_OFFSET, pos*LINE_HEIGHT - int(img.shape[0]/2)))
 
                 # lights name
-                parts = Image.fromarray(img[:, self.lights_name_start:self.lights_name_end])
+                # parts = Image.fromarray(img[:, self.lights_name_start:self.lights_name_end])
                 # canvas.paste(parts, (1200, pos*LINE_HEIGHT))
                 # canvas.paste(img, (10, pos*LINE_HEIGHT))
 
@@ -472,8 +472,9 @@ if __name__ == '__main__':
 
     if from_file.endswith('.png'):
         print('convert', from_file, to_file)
+        convert(from_file, to_file)
     else:
         for file in glob.glob(from_file + '*.png'):
-            to_file = to_file + '/' + os.path.basename(file)
-            print(file, to_file)
-            convert(from_file, to_file)
+            convert_file = to_file + '/' + os.path.basename(file)
+            print(file, convert_file)
+            convert(file, convert_file)

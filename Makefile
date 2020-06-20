@@ -1,14 +1,9 @@
-
-
 OUTDIR=./OUTDIR
-INDIR=./lights_data
+INDIR=./lightsdata/
 
-.include depend
 
-#.PHONY dep clean all
-
-out.png:
-
+all: $(OUTDIR)
+	python -m loader.ocr $(INDIR) $(OUTDIR)
 
 $(OUTDIR):
 	mkdir $(OUTDIR)
