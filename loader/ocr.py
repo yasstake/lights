@@ -33,23 +33,25 @@ w[206, 242, 308, 539, 576, 631, 659]
 
 C1 = [134]
 W1 = [85, 185]
+#       0    1    2    3    4    5     6      7
 C2 = [224, 280, 504, 554, 636, 795, 1064]
-W2 = [198, 234, 299, 530, 628, 649, 809, 1095]
+W2 = [198, 234, 299, 530, 628, 649,  809, 1095]
 
 LIGHT_NUMBER_WIDTH = C1[0] - W1[0]
+
 LIGHT_NAME_OFFSET = W1[1] - W1[0]
 LIGHT_NAME_WIDTH = CHAR_WIDTH * 30
 
 LIGHT_TYPE_OFFSET = W2[2] - W1[0]
 LIGHT_TYPE_WIDTH = C2[2] - W2[2]
 
-LIGHT_STRUCTURE_OFFSET = W2[5] - W2[0]
+LIGHT_STRUCTURE_OFFSET = W2[5] - W2[2]
 LIGHT_STRUCTURE_WIDTH = C2[5] - W2[5]
 
-LIGHT_REMARK_OFFSET = W2[6] - W2[0]
+LIGHT_REMARK_OFFSET = W2[6] - W2[2]
 LIGHT_REMARK_WIDTH = CHAR_WIDTH * 18
 
-FIND_OFFSET = 3
+FIND_OFFSET = 8
 
 OUTPUT_START_OFFSET = 30
 OUTPUT_TYPE_OFFSET = OUTPUT_START_OFFSET + 120
@@ -146,7 +148,16 @@ class Reader:
             start_pos = w[0]
 
         self.lights_no_start = start_pos
-        self.lights_no_end = find_pos(c, self.lights_no_start + LIGHT_NUMBER_WIDTH)
+        end = find_pos(c, self.lights_no_start + LIGHT_NUMBER_WIDTH)
+        end2 = find_pos(c, self.lights_no_start + LIGHT_NUMBER_WIDTH + CHAR_WIDTH)
+
+        if end2 and ((end2-end) < CHAR_WIDTH * 4):
+            self.lights_no_end = end2
+        else:
+            self.lights_no_end = end
+
+        print('lights_no', self.lights_no_start, self.lights_no_end)
+
         # self.lights_name_start = find_pos(w, start_pos + LIGHT_NAME_OFFSET)
         # self.lights_name_end = self.lights_name_start + LIGHT_NAME_WIDTH
 
@@ -155,18 +166,22 @@ class Reader:
 
         c, w = self.chop_colums(other)
 
-        self.lights_type_start = find_pos(w, start_pos + LIGHT_TYPE_OFFSET)
+        self.lights_type_start = find_pos(w, self.lights_no_start + LIGHT_TYPE_OFFSET)
         self.lights_type_end = find_pos(c, self.lights_type_start + LIGHT_TYPE_WIDTH)
+        print('lights type', self.lights_type_start, self.lights_type_end)
 
         self.lights_remark_start = find_pos(w, self.lights_type_start + LIGHT_REMARK_OFFSET)
         if self.lights_remark_start:
             self.lights_remark_end = self.lights_remark_start + LIGHT_REMARK_WIDTH
         else:
-            self.lights_remark_start = 0
-            self.lights_remark_end = 0
+            self.lights_remark_start = self.lights_type_start + LIGHT_REMARK_OFFSET
+            self.lights_remark_end = self.lights_remark_start + LIGHT_REMARK_WIDTH
+        print('lights remark', self.lights_remark_start, self.lights_remark_end)
 
-        self.lights_structure_start = find_pos(w, self.lights_type_start + LIGHT_STRUCTURE_OFFSET -
-                                                                         LIGHT_TYPE_OFFSET)
+        self.lights_structure_start = find_pos(w, self.lights_type_start + LIGHT_STRUCTURE_OFFSET)
+        if not self.lights_structure_start:
+            self.lights_structure_start = self.lights_type_start + LIGHT_STRUCTURE_OFFSET
+
         self.lights_structure_end = find_pos(c, self.lights_structure_start + LIGHT_STRUCTURE_WIDTH)
 
         if not self.lights_structure_end:
@@ -175,9 +190,7 @@ class Reader:
         if self.lights_structure_start == self.lights_remark_start:
             self.lights_structure_end = self.lights_structure_start
 
-        print('TYPE', self.lights_type_start, self.lights_type_end)
-        print('STRU', self.lights_structure_start, self.lights_structure_end)
-        print('REM ', self.lights_remark_start, self.lights_remark_end)
+        print('lights strucutre', self.lights_structure_start, self.lights_structure_end)
 
     def make_new_page(self):
         canvas = Image.new('L', (2100, 2800), 255)
@@ -200,7 +213,7 @@ class Reader:
                 # canvas.paste(img, (10, pos*LINE_HEIGHT))
 
                 draw = ImageDraw.Draw(canvas)
-                draw.line((0, pos*LINE_HEIGHT + 30, canvas.width, pos*LINE_HEIGHT + 30), fill=200)
+                draw.line((0, pos*LINE_HEIGHT + 50, canvas.width, pos*LINE_HEIGHT + 50), fill=200)
                 del draw
 
             elif self.img_type[index] == OTHER_LINE:
@@ -220,29 +233,35 @@ class Reader:
                 elif other_line_index == 1:
                     # lights structure
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
-                    width = self.lights_structure_end - self.lights_structure_start
+                    # width = self.lights_structure_end - self.lights_structure_start
+                    width = LIGHT_STRUCTURE_WIDTH
                     canvas.paste(parts, (OUTPUT_STRUCTURE_OFFSET + width, pos*LINE_HEIGHT - int(img.shape[0]/2)))
 
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
-                    width = self.lights_remark_end - self.lights_remark_start
+                    # width = self.lights_remark_end - self.lights_remark_start
+                    width = LIGHT_REMARK_WIDTH
                     canvas.paste(parts, (OUTPUT_REMARK_OFFSET + width, pos * LINE_HEIGHT - int(img.shape[0]/2)))
                 elif other_line_index == 2:
                     parts = Image.fromarray(img[:, self.lights_structure_start:self.lights_structure_end])
-                    width = self.lights_structure_end - self.lights_structure_start
+                    # width = self.lights_structure_end - self.lights_structure_start
+                    width = LIGHT_STRUCTURE_WIDTH
                     canvas.paste(parts, (OUTPUT_STRUCTURE_OFFSET + width*2, pos*LINE_HEIGHT - int(img.shape[0]/2)))
 
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
-                    width = self.lights_remark_end - self.lights_remark_start
+                    # width = self.lights_remark_end - self.lights_remark_start
+                    width = LIGHT_REMARK_WIDTH
                     canvas.paste(parts, (OUTPUT_REMARK_OFFSET + width*2, pos * LINE_HEIGHT - int(img.shape[0]/2)))
 
                 elif other_line_index == 3:
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
-                    width = self.lights_remark_end - self.lights_remark_start
+                    # width = self.lights_remark_end - self.lights_remark_start
+                    width = LIGHT_STRUCTURE_WIDTH
                     canvas.paste(parts, (OUTPUT_REMARK_OFFSET + width*3, pos * LINE_HEIGHT - int(img.shape[0]/2)))
 
                 elif other_line_index == 4:
                     parts = Image.fromarray(img[:, self.lights_remark_start: self.lights_remark_end])
-                    width = self.lights_remark_end - self.lights_remark_start
+                    # width = self.lights_remark_end - self.lights_remark_start
+                    width = LIGHT_STRUCTURE_WIDTH
                     canvas.paste(parts, (OUTPUT_REMARK_OFFSET + width*4, pos * LINE_HEIGHT - int(img.shape[0]/2)))
 
                 else:
@@ -301,22 +320,16 @@ class Reader:
             if not start_pos:
                 print('start->', w[0])
                 if (w[0] < 60) or (120 < w[0]):
-                    start_pos = 110 + CHAR_WIDTH * 3
+                    start_pos = 110 + CHAR_WIDTH * 2
                 else:
-                    start_pos = w[0] + CHAR_WIDTH * 3
+                    start_pos = w[0] + CHAR_WIDTH * 2
 
                 print('startpos', start_pos)
 
-            if w[0] < start_pos:
-                if not in_index:
-                    in_index = True
-                    self.img_type[index] = INDEX_LINE
-                    index_line = np.r_[index_line, img]
-                else:
-                    print('--MAJRO--')
-                    in_index = False
-                    self.img_type[index] = OTHER_LINE
-                    other_line = np.r_[other_line, img]
+            if w[0] < start_pos and not in_index:
+                in_index = True
+                self.img_type[index] = INDEX_LINE
+                index_line = np.r_[index_line, img]
             else:
                 in_index = False
                 self.img_type[index] = OTHER_LINE
@@ -331,7 +344,7 @@ class Reader:
         img = np.where(img <= WHITE_LEVEL, 0, img)
         column = np.average(img, axis=0)
         height = img.shape[0]
-        th = (255 * height*0.99) / height
+        th = (255 * height*0.98) / height
         column = th < column
 
         in_white = False

@@ -25,8 +25,6 @@ class MyTestCase(unittest.TestCase):
         r = reader.rotate_degree()
 
         reader.analyze()
-        print(reader.lights_no_start)
-        print(reader.lights_name_start)
 
         canvas = reader.make_new_page()
 
